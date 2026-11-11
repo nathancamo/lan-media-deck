@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark light">
+  <title>LAN Media &amp; Stream Deck</title>
+  <style>
+    :root {
+      color-scheme: dark light;
+      --bg-dark: #070b12;
+      --bg-light: #f1f5f9;
+      --panel-dark: #111827;
+      --panel-light: #ffffff;
+      --panel-hover-dark: #1e293b;
+      --panel-hover-light: #e2e8f0;
+      --text-dark: #f8fafc;
+      --text-light: #0f172a;
+      --muted-dark: #94a3b8;
+      --muted-light: #475569;
+      --accent-dark: #10b981;
+      --accent-light: #059669;
+      --border-dark: rgba(148, 163, 184, 0.18);
+      --border-light: rgba(15, 23, 42, 0.14);
+
+      --bg: var(--bg-dark);
+      --panel: var(--panel-dark);
+      --panel-hover: var(--panel-hover-dark);
+      --text: var(--text-dark);
+      --muted: var(--muted-dark);
+      --accent: var(--accent-dark);
+      --border: var(--border-dark);
+
+      @media (prefers-color-scheme: light) {
+        --bg: var(--bg-light);
+        --panel: var(--panel-light);
+        --panel-hover: var(--panel-hover-light);
+        --text: var(--text-light);
+        --muted: var(--muted-light);
+        --accent: var(--accent-light);
+        --border: var(--border-light);
+      }
+
+      @supports (color: light-dark(white, black)) {
+        --bg: light-dark(var(--bg-light), var(--bg-dark));
+        --panel: light-dark(var(--panel-light), var(--panel-dark));
+        --panel-hover: light-dark(var(--panel-hover-light), var(--panel-hover-dark));
+        --text: light-dark(var(--text-light), var(--text-dark));
+        --muted: light-dark(var(--muted-light), var(--muted-dark));
+        --accent: light-dark(var(--accent-light), var(--accent-dark));
+        --border: light-dark(var(--border-light), var(--border-dark));
+      }
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: var(--bg-dark);
+      --panel: var(--panel-dark);
+      --panel-hover: var(--panel-hover-dark);
+      --text: var(--text-dark);
+      --muted: var(--muted-dark);
+      --accent: var(--accent-dark);
+      --border: var(--border-dark);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      user-select: none;
+    }
+
+    header {
+      padding: 20px 36px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(17, 24, 39, 0.85);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 12px;
+    }
+
+    .tab-btn {
+      background: var(--panel);
+      color: var(--text);
+      border: 2px solid var(--border);
+      padding: 9px 20px;
+      border-radius: 999px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .tab-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(16, 185, 129, 0.16);
+    }
+
+    .tab-btn:focus, .tab-btn:focus-visible {
+      border-color: #fff;
+      box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.4);
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 24px;
+      padding: 24px 36px;
+      overflow: hidden;
+    }
+
+    .channel-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      padding-right: 6px;
+    }
+
+    .channel-item {
+      background: var(--panel);
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      outline: none;
+      transition: transform 0.14s ease, border-color 0.14s ease;
+    }
+
+    .channel-item:focus, .channel-item:focus-visible {
+      border-color: var(--accent);
+      background: var(--panel-hover);
+      transform: translateX(4px);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.35);
+    }
+
+    .channel-item.playing {
+      border-color: var(--accent);
+    }
+
+    .ch-name { font-size: 17px; font-weight: 700; }
+    .ch-sub { font-size: 13px; color: var(--muted); margin-top: 3px; }
+    .ch-tag {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(16, 185, 129, 0.18);
+      color: #34d399;
+    }
+
+    .stage {
+      background: #000;
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+
+    .stage-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.88));
+      padding: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      pointer-events: none;
+    }
+
+    .controls-row {
+      display: flex;
+      gap: 10px;
+      pointer-events: auto;
+    }
+
+    .ctrl-btn {
+      background: rgba(17, 24, 39, 0.9);
+      color: #fff;
+      border: 2px solid var(--border);
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+    }
+    .ctrl-btn:focus, .ctrl-btn:focus-visible {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.45);
+    }
+
+    footer {
+      padding: 14px 36px;
+      background: rgba(15, 23, 42, 0.95);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+
+    dialog {
+      margin: auto;
+      background: var(--panel);
+      color: var(--text);
+      border: 2px solid var(--accent);
+      border-radius: 18px;
+      padding: 24px;
+      width: min(640px, 90vw);
+    }
+    dialog::backdrop { background: rgba(0, 0, 0, 0.72); }
+    .field {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: #050811;
+      color: #fff;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+    .field:focus { border-color: var(--accent); outline: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1 style="font-size: 24px;">LAN Media &amp; Stream Deck</h1>
+      <p style="font-size: 13px; color: var(--muted);">Live HLS/MP4 Streams &middot; Camera Grid &middot; Quick Web Launcher</p>
+    </div>
+    <div class="tabs" id="tab-row">
+      <button class="tab-btn active" data-tab="streams" data-nav="true" tabindex="0">Live &amp; Test Streams</button>
+      <button class="tab-btn" data-tab="cameras" data-nav="true" tabindex="-1">LAN Cameras &amp; DVR</button>
+      <button class="tab-btn" data-tab="bookmarks" data-nav="true" tabindex="-1">Quick Web Bookmarks</button>
+    </div>
+  </header>
+
+  <main class="workspace" id="spatial-root" role="grid" aria-label="Media Deck">
+    <div class="channel-list" id="list-container" role="row"></div>
+
+    <div class="stage" id="player-stage">
+      <video id="video-el" playsinline controls></video>
+      <div class="stage-overlay">
+        <div>
+          <div style="font-size: 22px; font-weight: 700;" id="now-title">Select a stream or bookmark</div>
+          <div style="font-size: 14px; color: #cbd5e1; margin-top: 4px;" id="now-url">Ready for playback</div>
+        </div>
+        <div class="controls-row">
+          <button class="ctrl-btn" id="btn-playpause" data-nav="true" tabindex="-1">Play / Pause</button>
+          <button class="ctrl-btn" id="btn-fullscreen" data-nav="true" tabindex="-1">Fullscreen</button>
+          <button class="ctrl-btn" id="btn-custom" data-nav="true" tabindex="-1">+ Custom URL</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <dialog id="url-modal">
+    <h2 style="font-size: 22px;">Add Custom Stream or LAN URL</h2>
+    <p style="font-size: 14px; color: var(--muted); margin-top: 4px;">Enter an HLS (.m3u8), MP4, go2rtc stream, or Web URL:</p>
+    <input type="text" id="custom-name" class="field" placeholder="Stream Name (e.g. Driveway Cam)">
+    <input type="url" id="custom-url" class="field" placeholder="http://192.168.68.66:1984/api/stream.m3u8?src=cam1">
+    <div style="display: flex; gap: 12px; margin-top: 18px;">
+      <button class="ctrl-btn" id="modal-save" style="background: var(--accent); color: #000;">Add &amp; Play</button>
+      <button class="ctrl-btn" id="modal-cancel">Cancel</button>
+    </div>
+  </dialog>
+
+  <footer>
+    <div style="display: flex; gap: 20px;">
+      <span><b style="color:#ef4444;">Red:</b> Live Streams</span>
+      <span><b style="color:#22c55e;">Green:</b> LAN Cameras</span>
+      <span><b style="color:#eab308;">Yellow:</b> Web Bookmarks</span>
+      <span><b style="color:#3b82f6;">Blue:</b> Fullscreen Toggle</span>
+    </div>
+    <div style="color: var(--muted);">Media Keys Supported (Play / Pause / Stop / FF / RW)</div>
+  </footer>
+
+  <script>
+    (function () {
+      "use strict";
+
+      document.documentElement.setAttribute("data-theme", "dark");
+
+      try {
+        if (window.tizen && tizen.tvinputdevice) {
+          ["ColorF0Red", "ColorF1Green", "ColorF2Yellow", "ColorF3Blue",
+           "MediaPlay", "MediaPause", "MediaStop", "MediaFastForward", "MediaRewind"].forEach(function (k) {
+            try { tizen.tvinputdevice.registerKey(k); } catch (_) {}
+          });
+        }
+      } catch (_) {}
+
+      var CATALOG = {
+        streams: [
+          { name: "Apple BipBop 4K HLS", sub: "HLS Adaptive Stream Test", url: "https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8", type: "video", tag: "HLS" },
+          { name: "Tears of Steel (Open Movie)", sub: "Blender Foundation 1080p MP4", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4", type: "video", tag: "MP4" },
+          { name: "Big Buck Bunny", sub: "60fps High Bitrate Test", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4", type: "video", tag: "MP4" },
+          { name: "Sintel Open Film", sub: "Surround & Contrast Test", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4", type: "video", tag: "MP4" }
+        ],
+        cameras: [
+          { name: "Agent DVR (minipc)", sub: "http://192.168.68.66:8090", url: "http://192.168.68.66:8090", type: "web", tag: "DVR" },
+          { name: "go2rtc Stream Server", sub: "http://192.168.68.66:1984", url: "http://192.168.68.66:1984", type: "web", tag: "RTC" },
+          { name: "Home Assistant Cameras", sub: "http://192.168.68.66:8123", url: "http://192.168.68.66:8123", type: "web", tag: "HA" }
+        ],
+        bookmarks: [
+          { name: "Home Server Gateway (:3002)", sub: "minipc Homepage Dashboard", url: "http://192.168.68.66:3002", type: "web", tag: "LAN" },
+          { name: "Open WebUI (thinkcentre)", sub: "Local LLM Chat Interface", url: "http://192.168.68.122:8080", type: "web", tag: "AI" },
+          { name: "SearXNG Private Search", sub: "minipc Metasearch Engine", url: "http://192.168.68.66:8888", type: "web", tag: "WEB" },
+          { name: "Uptime Kuma (thinkcentre)", sub: "Homelab Status Monitor", url: "http://192.168.68.122:3001", type: "web", tag: "MON" }
+        ]
+      };
+
+      try {
+        var saved = JSON.parse(localStorage.getItem("tizen_custom_streams") || "[]");
+        if (Array.isArray(saved)) {
+          CATALOG.streams = saved.concat(CATALOG.streams);
+        }
+      } catch (_) {}
+
+      var activeTab = "streams";
+      var videoEl = document.getElementById("video-el");
+
+      function renderList() {
+        var listEl = document.getElementById("list-container");
+        listEl.innerHTML = "";
+        var items = CATALOG[activeTab] || [];
+        items.forEach(function (item) {
+          var row = document.createElement("div");
+          row.className = "channel-item";
+          row.setAttribute("data-nav", "true");
+          row.setAttribute("tabindex", "-1");
+          row.innerHTML =
+            '<div>' +
+              '<div class="ch-name">' + escapeHtml(item.name) + '</div>' +
+              '<div class="ch-sub">' + escapeHtml(item.sub) + '</div>' +
+            '</div>' +
+            '<span class="ch-tag">' + escapeHtml(item.tag) + '</span>';
+          row.addEventListener("click", function () {
+            activateItem(item, row);
+          });
+          listEl.appendChild(row);
+        });
+      }
+
+      function escapeHtml(s) {
+        return String(s || "").replace(/[&<>"']/g, function (c) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+        });
+      }
+
+      function activateItem(item, rowEl) {
+        Array.prototype.slice.call(document.querySelectorAll(".channel-item")).forEach(function (el) {
+          el.classList.remove("playing");
+        });
+        if (rowEl) rowEl.classList.add("playing");
+
+        document.getElementById("now-title").textContent = item.name;
+        document.getElementById("now-url").textContent = item.url;
+
+        if (item.type === "web") {
+          window.location.href = item.url;
+          return;
+        }
+
+        videoEl.src = item.url;
+        videoEl.play().catch(function () {});
+      }
+
+      function switchTab(tabKey) {
+        activeTab = tabKey;
+        Array.prototype.slice.call(document.querySelectorAll(".tab-btn")).forEach(function (b) {
+          b.classList.toggle("active", b.getAttribute("data-tab") === tabKey);
+        });
+        renderList();
+      }
+
+      Array.prototype.slice.call(document.querySelectorAll(".tab-btn")).forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          switchTab(btn.getAttribute("data-tab"));
+        });
+      });
+
+      document.getElementById("btn-playpause").addEventListener("click", function () {
+        if (videoEl.paused) videoEl.play().catch(function () {});
+        else videoEl.pause();
+      });
+
+      document.getElementById("btn-fullscreen").addEventListener("click", function () {
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(function () {});
+        } else if (videoEl.requestFullscreen) {
+          videoEl.requestFullscreen().catch(function () {});
+        }
+      });
+
+      var modal = document.getElementById("url-modal");
+      document.getElementById("btn-custom").addEventListener("click", function () {
+        if (typeof modal.showModal === "function") modal.showModal();
+        else modal.setAttribute("open", "open");
+        document.getElementById("custom-name").focus();
+      });
+
+      document.getElementById("modal-cancel").addEventListener("click", function () {
+        if (typeof modal.close === "function") modal.close();
+        else modal.removeAttribute("open");
+      });
+
+      document.getElementById("modal-save").addEventListener("click", function () {
+        var name = document.getElementById("custom-name").value.trim() || "Custom LAN Stream";
+        var u = document.getElementById("custom-url").value.trim();
+        if (!u) return;
+        var isVideo = /\.(m3u8|mp4|webm|mkv)(\?|$)/i.test(u);
+        var entry = { name: name, sub: u, url: u, type: isVideo ? "video" : "web", tag: isVideo ? "CUSTOM" : "WEB" };
+        CATALOG.streams.unshift(entry);
+        try {
+          var saved = JSON.parse(localStorage.getItem("tizen_custom_streams") || "[]");
+          saved.unshift(entry);
+          localStorage.setItem("tizen_custom_streams", JSON.stringify(saved.slice(0, 15)));
+        } catch (_) {}
+        if (typeof modal.close === "function") modal.close();
+        else modal.removeAttribute("open");
+        switchTab("streams");
+        activateItem(entry);
+      });
+
+      // Spatial navigation
+      function getCandidates() {
+        var all = Array.prototype.slice.call(document.querySelectorAll('[data-nav="true"]'));
+        return all.filter(function (el) {
+          if (typeof el.checkVisibility === "function") return el.checkVisibility();
+          return el.offsetWidth > 0 && el.offsetHeight > 0;
+        });
+      }
+
+      function setRovingFocus(target) {
+        var candidates = getCandidates();
+        candidates.forEach(function (el) {
+          el.setAttribute("tabindex", el === target ? "0" : "-1");
+        });
+        target.focus();
+        target.scrollIntoView({ block: "nearest", inline: "nearest" });
+      }
+
+      function findNextCandidate(current, dir) {
+        var candidates = getCandidates().filter(function (el) { return el !== current; });
+        var curRect = current.getBoundingClientRect();
+        var tolerance = 4;
+
+        var inDir = candidates.filter(function (el) {
+          var r = el.getBoundingClientRect();
+          if (dir === "right") return r.left >= curRect.right - tolerance;
+          if (dir === "left") return r.right <= curRect.left + tolerance;
+          if (dir === "down") return r.top >= curRect.bottom - tolerance;
+          if (dir === "up") return r.bottom <= curRect.top + tolerance;
+          return false;
+        });
+
+        if (!inDir.length) return null;
+
+        var curCenterX = (curRect.left + curRect.right) / 2;
+        var curCenterY = (curRect.top + curRect.bottom) / 2;
+        var aligned = [];
+        var unaligned = [];
+
+        inDir.forEach(function (el) {
+          var r = el.getBoundingClientRect();
+          var cx = (r.left + r.right) / 2;
+          var cy = (r.top + r.bottom) / 2;
+          var gap, perpOffset, overlaps;
+
+          if (dir === "left" || dir === "right") {
+            gap = dir === "right" ? Math.max(0, r.left - curRect.right) : Math.max(0, curRect.left - r.right);
+            perpOffset = Math.abs(cy - curCenterY);
+            overlaps = Math.min(r.bottom, curRect.bottom) > Math.max(r.top, curRect.top);
+          } else {
+            gap = dir === "down" ? Math.max(0, r.top - curRect.bottom) : Math.max(0, curRect.top - r.bottom);
+            perpOffset = Math.abs(cx - curCenterX);
+            overlaps = Math.min(r.right, curRect.right) > Math.max(r.left, curRect.left);
+          }
+
+          var entry = { el: el, gap: gap, perpOffset: perpOffset, score: gap + 2.5 * perpOffset };
+          if (overlaps) aligned.push(entry);
+          else unaligned.push(entry);
+        });
+
+        if (aligned.length) {
+          aligned.sort(function (a, b) { return (a.gap - b.gap) || (a.perpOffset - b.perpOffset); });
+          return aligned[0].el;
+        }
+        unaligned.sort(function (a, b) { return a.score - b.score; });
+        return unaligned[0].el;
+      }
+
+      window.addEventListener("keydown", function (e) {
+        if (modal.open) {
+          if (e.keyCode === 10009 || e.key === "Escape") {
+            e.preventDefault();
+            if (typeof modal.close === "function") modal.close();
+          }
+          return;
+        }
+
+        var code = e.keyCode;
+        var k = e.key;
+        var dirMap = { 37: "left", ArrowLeft: "left", 38: "up", ArrowUp: "up", 39: "right", ArrowRight: "right", 40: "down", ArrowDown: "down" };
+        var dir = dirMap[k] || dirMap[code];
+
+        if (dir) {
+          var cur = document.activeElement;
+          var candidates = getCandidates();
+          if (candidates.indexOf(cur) === -1) {
+            if (candidates.length) { e.preventDefault(); setRovingFocus(candidates[0]); }
+            return;
+          }
+          var next = findNextCandidate(cur, dir);
+          if (next) {
+            e.preventDefault();
+            setRovingFocus(next);
+          }
+          return;
+        }
+
+        if (k === "Enter" || code === 13) {
+          var active = document.activeElement;
+          if (active && active.getAttribute("data-nav") === "true") {
+            e.preventDefault();
+            active.click();
+          }
+          return;
+        }
+
+        if (code === 403) { e.preventDefault(); switchTab("streams"); }
+        else if (code === 404) { e.preventDefault(); switchTab("cameras"); }
+        else if (code === 405) { e.preventDefault(); switchTab("bookmarks"); }
+        else if (code === 406) { e.preventDefault(); document.getElementById("btn-fullscreen").click(); }
+        else if (code === 415) { videoEl.play().catch(function () {}); }
+        else if (code === 19) { videoEl.pause(); }
+        else if (code === 413) { videoEl.pause(); videoEl.currentTime = 0; }
+        else if (code === 417) { videoEl.currentTime += 15; }
+        else if (code === 412) { videoEl.currentTime = Math.max(0, videoEl.currentTime - 15); }
+        else if (code === 10009) {
+          try { tizen.application.getCurrentApplication().exit(); } catch (_) {}
+        }
+      });
+
+      renderList();
+      if (CATALOG.streams.length) {
+        activateItem(CATALOG.streams[0], document.querySelector(".channel-item"));
+      }
+    })();
+  </script>
+</body>
+</html>
